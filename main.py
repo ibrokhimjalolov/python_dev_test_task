@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import sys
+import json
+import datetime
 
 from aiogram import Bot, Dispatcher, html
 from aiogram.client.default import DefaultBotProperties
@@ -8,7 +10,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from config import TOKEN
-
+from helper import get_period_stat
 # Bot token can be obtained via https://t.me/BotFather
 
 # All handlers should be attached to the Router (or Dispatcher)
@@ -29,19 +31,21 @@ async def command_start_handler(message: Message) -> None:
 
 
 @dp.message()
-async def echo_handler(message: Message) -> None:
-    """
-    Handler will forward receive a message back to the sender
-
-    By default, message handler will handle all message types (like a text, photo, sticker etc.)
-    """
+async def input_handler(message: Message) -> None:
     try:
-        # Send a copy of the received message
-        await message.send_copy(chat_id=message.chat.id)
-    except TypeError:
-        # But not all the types is supported to be copied so need to handle it
-        await message.answer("Nice try!")
-
+        data = json.loads(message.text)
+        dt_from = data["dt_from"]
+        dt_upto = data["dt_upto"]
+        group_type = data["group_type"]
+        dt_from = datetime.datetime.strptime(dt_from, "%Y-%m-%dT%H:%M:%S")
+        dt_upto = datetime.datetime.strptime(dt_upto, "%Y-%m-%dT%H:%M:%S")
+        assert group_type in ["hour", "day", "month"], "Invalid group type"
+    except (json.JSONDecodeError, KeyError, ValueError, AssertionError):
+        await message.answer("Invalid JSON")
+        return
+    result = await get_period_stat(dt_from, dt_upto, group_type)
+    await message.answer(result)
+    
 
 async def main() -> None:
     # Initialize Bot instance with default bot properties which will be passed to all API calls
