@@ -44,7 +44,7 @@ async def input_handler(message: Message) -> None:
         await message.answer("Invalid JSON")
         return
     result = await get_period_stat(dt_from, dt_upto, group_type)
-    await message.answer(result)
+    await message.answer(json.dumps(result))
     
 
 async def main() -> None:
