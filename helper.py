@@ -1,6 +1,7 @@
 import datetime
 import motor.motor_asyncio
 from config import MONGO_URL, MONGO_DB_NAME, MONGO_COLLECTION
+from collections import defaultdict
 
 
 async def get_period_stat(dt_from: datetime.datetime, dt_upto: datetime.datetime, group_type: str) -> str:
@@ -9,6 +10,30 @@ async def get_period_stat(dt_from: datetime.datetime, dt_upto: datetime.datetime
     db = client[MONGO_DB_NAME]
     collection = db[MONGO_COLLECTION]
     
+    all_times = []
+    if group_type == "month":
+        d = dt_from
+        d.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        while d <= dt_upto:
+            if d >= dt_from:
+                all_times.append(d)
+            d += datetime.timedelta(days=32)
+            d.day = 1
+    elif group_type == "day":
+        d = dt_from
+        d.replace(hour=0, minute=0, second=0, microsecond=0)
+        while d <= dt_upto:
+            if d >= dt_from:
+                all_times.append(d)
+            d += datetime.timedelta(days=1)
+    elif group_type == "hour":
+        d = dt_from
+        d.replace(minute=0, second=0, microsecond=0)
+        while d <= dt_upto:
+            if d >= dt_from:
+                all_times.append(d)
+            d += datetime.timedelta(hours=1)        
+            
     # Match condition
     match_condition = {
         "dt": {"$gte": dt_from, "$lte": dt_upto}
@@ -46,18 +71,23 @@ async def get_period_stat(dt_from: datetime.datetime, dt_upto: datetime.datetime
         raise ValueError(group_type)
     dataset = []
     labels = []
+    
+    dataset_as_dict = defaultdict(int)
+    
     # Perform aggregation
     async for result in collection.aggregate([{"$match": match_condition}, {"$group": group_by}, {"$sort": {"_id": 1}}]):
-        dataset.append(result["total"])
-        t = datetime.datetime(
+        d = datetime.datetime(
             year=result["_id"]["year"],
             month=result["_id"].get("month", 1),
             day=result["_id"].get("day", 1),
             hour=result["_id"].get("hour", 0)
         )
-        labels.append(
-            t.strftime("%Y-%m-%dT%H:%M:%S")
-        )
+        dataset_as_dict[d] = result["total"]
+    
+    for d in all_times:
+        dataset.append(dataset_as_dict[d])
+        labels.append(d.strftime("%Y-%m-%dT%H:%M:%S"))
+        
     return {
         "dataset": dataset,
         "labels": labels,
