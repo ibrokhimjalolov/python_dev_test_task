@@ -13,23 +13,23 @@ async def get_period_stat(dt_from: datetime.datetime, dt_upto: datetime.datetime
     all_times = []
     if group_type == "month":
         d = dt_from
-        d.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        d = d.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         while d <= dt_upto:
             if d >= dt_from:
                 all_times.append(d)
             # goto next month
             d += datetime.timedelta(days=32)
-            d.replace(day=1)
+            d = d.replace(day=1)
     elif group_type == "day":
         d = dt_from
-        d.replace(hour=0, minute=0, second=0, microsecond=0)
+        d = d.replace(hour=0, minute=0, second=0, microsecond=0)
         while d <= dt_upto:
             if d >= dt_from:
                 all_times.append(d)
             d += datetime.timedelta(days=1)
     elif group_type == "hour":
         d = dt_from
-        d.replace(minute=0, second=0, microsecond=0)
+        d = d.replace(minute=0, second=0, microsecond=0)
         while d <= dt_upto:
             if d >= dt_from:
                 all_times.append(d)
